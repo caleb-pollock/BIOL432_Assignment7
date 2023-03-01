@@ -1,0 +1,145 @@
+---
+title: "A7_Pollock_Caleb"
+output: html_document
+date: "2023-02-28"
+---
+https://github.com/caleb-pollock/BIOL432_Assignment7
+
+This code chunk is responsible for adding the new dragon taxa into the .nex file.
+
+```{r}
+library(ape)
+library(ggtree)
+library(dplyr)
+
+# import the data using ape
+dat <- readLines("C:/Users/omgwh/OneDrive/Desktop/BIOL432_Assignment7/input/DragonMatrix.nex")
+
+# new dragon taxa
+
+newDragons <- c(
+  "EldenRing1 100111110100110100110101001111100001100001100001101100101000111111000000010001",
+  "MalygosWoW 000111110100111000000100010110000000010000010000011100100000111100000010011001",
+  "Sartharion 000111110100101000000000000111101000001000001000001100100000111100000001111100"
+)
+
+# appends the new dragons above the 0.1FishXXX and below the matrix
+matrixFind <- grep("0.1FishXXX", dat)
+
+# updates the taxa number
+dat <- gsub("ntax=77", "ntax=80",dat)
+
+# splits until matrixFind, then adds new data, then adds everything back
+dat <- c(dat[1:matrixFind-1], newDragons, dat[matrixFind:length(dat)])
+
+# write to .nex
+writeLines(dat,"C:/Users/omgwh/OneDrive/Desktop/BIOL432_Assignment7/input/DragonMatrix.nex")
+```
+
+This next code chunk will import the nexus data and observe the structure.
+
+```{r}
+DragonNexus <- read.nexus.data("C:/Users/omgwh/OneDrive/Desktop/BIOL432_Assignment7/input/DragonMatrix.nex")
+head(DragonNexus)
+names(DragonNexus)
+```
+
+We will import the weights.csv data and apply it to the DragonNexus data
+
+```{r}
+# import weights
+WeightsDat <- read.csv("C:/Users/omgwh/OneDrive/Desktop/BIOL432_Assignment7/data/Weights.csv")
+
+# from tutorial, applying the weights to each of the traits
+Weights <- paste0(WeightsDat$Weight, collapse="")
+Weights <- strsplit(Weights, split = "")[[1]]
+
+WeightsNum <- rep(NA, length(Weights))
+for (i in 1:length(WeightsNum)){
+  if(Weights[i] %in% LETTERS){
+    WeightsNum[i] <- which(LETTERS==Weights[i])+9
+  } else {
+    WeightsNum[i] <- Weights[i]
+  }
+}
+
+WeightsNum <- as.numeric(WeightsNum)
+length(WeightsNum)
+
+WtDragonNexus <- DragonNexus
+for (i in 1:length(DragonNexus)){
+  RepWeight <- DragonNexus[[i]]==1
+  WtDragonNexus[[i]][RepWeight] <- WeightsNum[RepWeight]
+  RepWeight <- NA
+}
+```
+
+Converting into a dataframe
+
+```{r}
+WtDragonNexusDF <- data.frame(matrix(unlist(WtDragonNexus),ncol=78, byrow=T))
+row.names(WtDragonNexusDF) <- names(WtDragonNexus)
+WtDragonDist<-dist(WtDragonNexusDF, method='euclidean')
+
+WtDragonDistMat <- as.matrix(WtDragonDist)
+```
+
+```{r}
+WtDragonTree   <- fastme.bal(WtDragonDist)
+WtDragonTreeNJ <- nj(WtDragonDist)
+```
+
+```{r}
+Country<-gsub("[0-9\\.]+([^X]+)X*","\\1",WtDragonTree$tip.label)
+```
+
+```{r}
+CountryGroups <- split(WtDragonTree$tip.label, Country)
+```
+
+```{r}
+WtDTcol <- groupOTU(WtDragonTree, CountryGroups)
+str(WtDTcol)
+```
+
+```{r}
+ggtree(WtDTcol, layout="circular",aes(colour=group)) +
+  geom_tiplab(size=2, aes(angle=angle))
+```
+
+# Dragon Choices
+
+Here are the dragons I choose for the phylogeny
+
+![Elden Ring](C:/Users/omgwh/OneDrive/Desktop/BIOL432_Assignment7/images/drag1.jpg)
+
+Source: Elden Ring
+https://cdn1.dotesports.com/wp-content/uploads/2022/03/03190345/Elden-Ring-Screenshot.jpg")
+
+
+![Malygos](C:/Users/omgwh/OneDrive/Desktop/BIOL432_Assignment7/images/drag2.jpg)
+
+Source: World of Warcraft Classic https://www.warcrafttavern.com/wp-content/uploads/2022/09/WotLK-Classic-Malygos-Strategy-Guide-Featured-Image-scaled.jpg
+
+![Sartharion](C:/Users/omgwh/OneDrive/Desktop/BIOL432_Assignment7/images/drag3.jpg)
+
+Source: World of Warcaft Classic https://www.warcrafttavern.com/wp-content/uploads/2022/09/WotLK-Classic-Sartharion-Strategy-Guide-Featured-Image-scaled.jpg
+
+# Backstory and Intepretation
+
+Introduction 
+
+This research seeks to characterize the existence of a dragon from the popular game Elden Ring, and two dragons from the popular game World of Warcraft. Through creating a phylogeny of popular dragon artwork and assigning codes to certain traits, we hope to create a phylogeny of dragon taxa.
+
+Methods 
+
+To preform this, visual inspection of dragon images was preformed to create a code corresponding to a dragons given trait. Traits were qualitatively observed and characterize the morphology of the dragon, such as number of appendages, talon size, presence or absence of scales or other Armour etc. Using ape and ggtree a phylogeny will be constructed once the new dragon data has entered into the .nex file.
+
+Results
+
+Analysis was able to plot the new dragons on the phylogeny of dragon taxa, with the Elden Ring dragon as well as the two World of Warcraft dragons found on the phylogeny above.
+
+Discussion 
+
+The two World of Warcraft dragons were determined to be closely related according to the phylogeny. This makes sense, as they are both from the same series, and have very similar morphologies as noted in the photos above. The Elden Ring dragon is classified close to the World of Warcraft Dragons, which is interesting considering they are from different series. However, the basic morphology of these dragons are similar enough for them to be related based on the phylogeny I produced.
+
